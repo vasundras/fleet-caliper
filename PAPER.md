@@ -74,9 +74,27 @@ enforcement on a suite of agentic tasks.
 
 ## 7. Evaluation
 
-- **Tasks**: a suite of agentic benchmarks (tool-use, web research, multi-step coding) with injected failure conditions.
-- **Metrics**: budget-overrun rate without/with Caliper; dollars saved; false-halt rate on healthy runs; detection latency (steps-to-trip).
-- **Ablations**: each detector independently; window/threshold sensitivity; soft-vs-hard-only.
+### 7.1 Simulation study (reproducible, LLM-free)
+
+A seeded fleet simulation (`benchmarks/simulate.py`) drives the budgeting,
+attribution, and baseline core over a synthetic workload: agents with distinct
+cost scales, a fraction of tasks going runaway (geometric per-event cost growth),
+and injected single-event spikes. Three regimes on one stream: `none`,
+`iteration(cap=N)`, `caliper`.
+
+- **Headline result.** The blunt iteration cap minimizes dollars but only by
+  truncating healthy tasks (≈50% of healthy work kept at seed=7); Caliper saves
+  ~45% vs. unbounded spend, stops 100% of runaways, and preserves ~82% of
+  healthy work. The key metric is *healthy work preserved at equal runaway
+  containment* — cheap governance that deletes good work is not a fair baseline.
+- **Grounding.** Spike/trend alerts fire on runaway/spike events before any hard
+  ceiling is reached (early-warning latency, in steps).
+
+### 7.2 End-to-end study (live models) — planned
+
+- **Tasks**: agentic benchmarks (tool-use, web research, multi-step coding) with injected failure conditions.
+- **Metrics**: budget-overrun rate without/with Caliper; dollars saved; healthy-work-preserved; false-halt rate; detection latency (steps-to-trip).
+- **Ablations**: each detector independently; window/threshold sensitivity; soft-vs-hard-only; per-dimension vs. global-only budgets.
 - **Baselines**: fixed max-iteration cap; post-hoc cost reporting only.
 
 ## 8. Limitations and Future Work
@@ -94,4 +112,4 @@ into a bounded, economically predictable primitive.
 
 ## Reproducibility
 
-Code: https://github.com/vasundras/caliper (MIT). Benchmark scripts and seeds in `benchmarks/`.
+Code: https://github.com/vasundras/fleet-caliper (MIT). Benchmark scripts and seeds in `benchmarks/`.

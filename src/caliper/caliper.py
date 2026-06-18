@@ -5,14 +5,18 @@ from __future__ import annotations
 
 from typing import Any, Callable, Literal
 
+from typing import TYPE_CHECKING
+
 from .alerts import Alert
 from .attribution import AttributionBudget, LabeledMeter
 from .baselines import BaselineTracker
 from .budget import BudgetPolicy, CostMeter, Scope
-from .callbacks import CaliperCallbackHandler
 from .exceptions import LoopDetected
 from .loop_detection import LoopDetector, signature
 from .pricing import PriceBook
+
+if TYPE_CHECKING:
+    from .callbacks import CaliperCallbackHandler
 
 
 class Caliper:
@@ -78,8 +82,14 @@ class Caliper:
         self.on_alert = on_alert
 
     # --- metering -----------------------------------------------------------
-    def callback_handler(self) -> CaliperCallbackHandler:
-        """A fresh handler bound to this Caliper's meters, budgets, and baselines."""
+    def callback_handler(self) -> "CaliperCallbackHandler":
+        """A fresh handler bound to this Caliper's meters, budgets, and baselines.
+
+        Imported lazily: the callback is the only langchain-dependent surface, so
+        the rest of Caliper works without langchain installed.
+        """
+        from .callbacks import CaliperCallbackHandler
+
         return CaliperCallbackHandler(
             meter=self.meter,
             policy=self.policy,

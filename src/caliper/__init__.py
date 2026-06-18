@@ -25,11 +25,19 @@ from .alerts import Alert, AlertKind
 from .attribution import AttributionBudget, AttributionBreach, BudgetRule, LabeledMeter
 from .baselines import BaselineTracker, ScopeStats, SpikeVerdict
 from .budget import BudgetPolicy, CostMeter, Scope, Usage
-from .callbacks import CaliperCallbackHandler
 from .exceptions import BudgetExceeded, CaliperTripped, LoopDetected
 from .loop_detection import LoopDetector
 from .pricing import PriceBook
 from .caliper import Caliper
+
+# CaliperCallbackHandler is the only langchain-dependent surface. Import it
+# lazily so the framework-agnostic core (budgets, attribution, baselines, loop
+# detection) is usable without langchain installed.
+def __getattr__(name: str):  # PEP 562
+    if name == "CaliperCallbackHandler":
+        from .callbacks import CaliperCallbackHandler
+        return CaliperCallbackHandler
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
     "Caliper",

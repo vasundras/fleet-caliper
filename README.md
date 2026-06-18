@@ -36,7 +36,7 @@ Caliper treats the budget as a **control-plane primitive**:
 ## Install
 
 ```bash
-pip install caliper-ai   # distribution name; imports as `caliper`
+pip install fleet-caliper   # distribution name; imports as `caliper`
 ```
 
 ## Quickstart (LangGraph)
