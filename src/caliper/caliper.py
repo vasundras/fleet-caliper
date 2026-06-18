@@ -3,8 +3,11 @@ and exposes the LangGraph integration points."""
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
+from .alerts import Alert
+from .attribution import AttributionBudget, LabeledMeter
+from .baselines import BaselineTracker
 from .budget import BudgetPolicy, CostMeter, Scope
 from .callbacks import CaliperCallbackHandler
 from .exceptions import LoopDetected
@@ -13,12 +16,29 @@ from .pricing import PriceBook
 
 
 class Caliper:
-    """One object to bound an agent run economically and behaviorally.
+    """One object to bound an agent fleet economically and behaviorally.
+
+    Bounds spend along two independent axes:
+      * **temporal** — step/run/session/fleet ceilings (``policy``);
+      * **dimensional** — per-agent / per-task / per-(agent,task) ceilings
+        (``attribution_budget``), with statistical spike/trend grounding
+        (``baselines``).
 
     Typical wiring (LangGraph):
 
-        caliper = Caliper(policy=BudgetPolicy(run_usd_hard=1.0), pricebook=PriceBook.default())
-        llm = model.with_config(callbacks=[caliper.callback_handler()])
+        caliper = Caliper(
+            policy=BudgetPolicy(run_usd_hard=1.0),
+            attribution_budget=AttributionBudget([
+                BudgetRule(per="agent", usd_hard=2.0),   # every agent
+                BudgetRule(per="task",  usd_hard=0.5),   # every task
+            ]),
+            on_alert=print,
+        )
+        # attach labels per call so spend is attributable:
+        llm = model.with_config(
+            callbacks=[caliper.callback_handler()],
+            metadata={"agent": "researcher", "task": task_id},
+        )
         graph.add_conditional_edges("agent", caliper.budget_edge, {"continue": "tools", "halt": END})
 
         def agent_node(state):
@@ -31,25 +51,46 @@ class Caliper:
         policy: BudgetPolicy,
         pricebook: PriceBook | None = None,
         loop_detector: LoopDetector | None = None,
+        attribution_budget: AttributionBudget | None = None,
+        baselines: BaselineTracker | None = None,
+        label_keys: tuple[str, ...] = ("agent", "task"),
         default_model: str | None = None,
-        on_downgrade: Any = None,
+        on_downgrade: Callable[[Any], None] | None = None,
+        on_alert: Callable[[Alert], None] | None = None,
     ) -> None:
         self.policy = policy
         self.pricebook = pricebook or PriceBook.default()
         self.meter = CostMeter()
         self.loop_detector = loop_detector or LoopDetector()
+        # Dimensional attribution + grounding. A LabeledMeter is created whenever
+        # any dimensional feature is requested, so per-scope spend is always
+        # queryable via snapshot() even without explicit budget rules.
+        self.attribution_budget = attribution_budget
+        self.baselines = baselines
+        self.labeled_meter = (
+            LabeledMeter()
+            if (attribution_budget is not None or baselines is not None)
+            else None
+        )
+        self.label_keys = label_keys
         self.default_model = default_model
         self.on_downgrade = on_downgrade
+        self.on_alert = on_alert
 
     # --- metering -----------------------------------------------------------
     def callback_handler(self) -> CaliperCallbackHandler:
-        """A fresh handler bound to this Caliper's meter and policy."""
+        """A fresh handler bound to this Caliper's meters, budgets, and baselines."""
         return CaliperCallbackHandler(
             meter=self.meter,
             policy=self.policy,
             pricebook=self.pricebook,
+            labeled_meter=self.labeled_meter,
+            attribution_budget=self.attribution_budget,
+            baselines=self.baselines,
+            label_keys=self.label_keys,
             default_model=self.default_model,
             on_downgrade=self.on_downgrade,
+            on_alert=self.on_alert,
         )
 
     # --- LangGraph gating ---------------------------------------------------
@@ -92,7 +133,10 @@ class Caliper:
 
     # --- observability ------------------------------------------------------
     def snapshot(self) -> dict[str, Any]:
-        return {"usage": self.meter.snapshot()}
+        snap: dict[str, Any] = {"usage": self.meter.snapshot()}
+        if self.labeled_meter is not None:
+            snap["attributed"] = self.labeled_meter.snapshot()
+        return snap
 
     def reset_run(self) -> None:
         """Reset per-run accounting and the loop window at a run boundary."""

@@ -12,10 +12,18 @@ an API key.
 
 from __future__ import annotations
 
-from caliper import BudgetPolicy, Caliper, CaliperTripped, PriceBook
+from caliper import (
+    AttributionBudget,
+    BaselineTracker,
+    BudgetPolicy,
+    BudgetRule,
+    Caliper,
+    CaliperTripped,
+    PriceBook,
+)
 
 
-def build(llm, tools):
+def build(llm, tools, agent_name: str = "researcher", task_id: str = "task-1"):
     from langgraph.graph import END, START, StateGraph
     from langgraph.graph.message import add_messages
     from typing import Annotated, TypedDict
@@ -29,13 +37,21 @@ def build(llm, tools):
             run_usd_hard=1.00,    # hard: halt the run
             fleet_usd_hard=50.0,  # hard: total ceiling across all runs
         ),
+        attribution_budget=AttributionBudget([
+            BudgetRule(per="agent", usd_hard=2.00),                 # per-agent ceiling
+            BudgetRule(per="task", usd_soft=0.40, usd_hard=0.50),   # per-task ceiling
+        ]),
+        baselines=BaselineTracker(z_threshold=3.0, trend_ratio=1.75),
         pricebook=PriceBook.default(),
         default_model="gpt-4o-mini",
         on_downgrade=lambda breach: print(f"[caliper] soft limit hit: {breach.message()}"),
+        on_alert=lambda alert: print(f"[caliper] {alert}"),  # exhaustion / spike / trend
     )
 
+    # Labels on metadata make every model call attributable to an agent and task.
     metered_llm = llm.bind_tools(tools).with_config(
-        callbacks=[caliper.callback_handler()]
+        callbacks=[caliper.callback_handler()],
+        metadata={"agent": agent_name, "task": task_id},
     )
 
     def agent_node(state: State):

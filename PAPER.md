@@ -24,10 +24,11 @@ enforcement on a suite of agentic tasks.
 - The economic-control gap in current agent frameworks: observability ≠ control.
 - Why pricing-model shifts (T&M → fixed-fee → consumption) make this load-bearing.
 - Contributions:
-  1. A control-plane formulation of agent budgets (hierarchical scopes, enforced at runtime).
-  2. Goal-independent, online detection of the three overspend pathologies.
-  3. A graceful-degradation policy (soft→downgrade, hard→halt) and its semantics.
-  4. An open-source, framework-native reference implementation (LangGraph/LangChain) and a reproducible benchmark.
+  1. A control-plane formulation of agent budgets along two orthogonal axes — a *temporal* nesting (step/run/session/fleet) and a *dimensional* attribution (per-agent, per-task, per-(agent,task)) — composed and enforced at runtime.
+  2. Statistical grounding of cost events against per-scope online baselines (Welford + dual-EWMA), yielding spike and trend signals distinct from, and earlier than, budget exhaustion.
+  3. Goal-independent, online detection of the three overspend pathologies (repetition, periodic cycle, state oscillation).
+  4. A graceful-degradation policy (soft→downgrade, hard→halt) and its semantics.
+  5. An open-source, framework-native reference implementation (LangGraph/LangChain) and a reproducible benchmark.
 
 ## 2. Related Work
 
@@ -38,9 +39,18 @@ enforcement on a suite of agentic tasks.
 
 ## 3. Problem Formulation
 
-- Define an agent run as a trajectory of steps; each step has a token/dollar cost.
-- Budget scopes as a nested containment hierarchy; a ceiling at any scope bounds all inner runs.
-- The control objective: halt before crossing a hard ceiling while minimizing premature halts on healthy runs.
+- Define an agent run as a trajectory of steps; each step has a token/dollar cost and a label vector (agent, task, ...).
+- **Two budget axes.** Temporal scopes as a nested containment hierarchy (step ⊂ run ⊂ session ⊂ fleet); dimensional scopes as label projections (per-agent, per-task, per-(agent,task)). A ceiling on any scope, on either axis, bounds the spend attributed to it. The axes are orthogonal and composed: an event updates all scopes it belongs to, and any may breach.
+- Why per-dimension matters: a single global ceiling cannot distinguish a normally expensive task from a runaway agent, and absorbs a single bad actor into the aggregate until the whole budget is gone.
+- The control objective: halt before crossing a hard ceiling on any scope while minimizing premature halts on healthy runs.
+
+## 3a. Statistical Grounding of Cost Events
+
+- Per-scope online statistics over per-event cost: Welford mean/variance (no stored history) and short/long EWMAs.
+- **Spike**: z-score ≥ τ_z, with a relative-deviation fallback when variance is zero (a step change off a flat baseline is undefined under z but is exactly the case of interest).
+- **Trend**: short/long EWMA ratio ≥ τ_r (cost-per-event drifting upward for this scope).
+- Warmup (min-samples) before judging; per-scope independence so a cheap agent and an expensive agent are each judged against their own norm.
+- These are observability signals that fire *before* exhaustion; they do not by themselves halt a run.
 
 ## 4. Detection of Overspend Pathologies
 
