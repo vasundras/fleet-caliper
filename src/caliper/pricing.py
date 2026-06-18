@@ -38,7 +38,7 @@ class PriceBook:
     rates: dict[str, ModelRate] = field(default_factory=dict)
     fallback: ModelRate = ModelRate(0.0, 0.0)
 
-    def with_rate(self, model: str, input_per_mtok: float, output_per_mtok: float) -> "PriceBook":
+    def with_rate(self, model: str, input_per_mtok: float, output_per_mtok: float) -> PriceBook:
         self.rates[model] = ModelRate(input_per_mtok, output_per_mtok)
         return self
 
@@ -58,7 +58,7 @@ class PriceBook:
         return self.rate_for(model).cost(input_tokens, output_tokens)
 
     @classmethod
-    def default(cls) -> "PriceBook":
+    def default(cls) -> PriceBook:
         """A starter price book. **Verify and override these for production.**"""
         return cls(
             rates={

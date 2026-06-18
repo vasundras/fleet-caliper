@@ -1,5 +1,9 @@
 # Caliper
 
+[![CI](https://github.com/vasundras/fleet-caliper/actions/workflows/ci.yml/badge.svg)](https://github.com/vasundras/fleet-caliper/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 **Cost-bounded autonomy for LLM agent fleets.** A small, framework-native runtime that gives autonomous agents a hard economic ceiling and a way to detect — and stop — the failure modes that quietly burn budget: runaway loops, tool thrashing, and oscillating state.
 
 Built for [LangGraph](https://github.com/langchain-ai/langgraph) / [LangChain](https://github.com/langchain-ai/langchain), with first-class [LangSmith](https://smith.langchain.com/) telemetry.

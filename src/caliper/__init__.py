@@ -22,13 +22,14 @@ Public API:
 """
 
 from .alerts import Alert, AlertKind
-from .attribution import AttributionBudget, AttributionBreach, BudgetRule, LabeledMeter
+from .attribution import AttributionBreach, AttributionBudget, BudgetRule, LabeledMeter
 from .baselines import BaselineTracker, ScopeStats, SpikeVerdict
 from .budget import BudgetPolicy, CostMeter, Scope, Usage
+from .caliper import Caliper
 from .exceptions import BudgetExceeded, CaliperTripped, LoopDetected
 from .loop_detection import LoopDetector
 from .pricing import PriceBook
-from .caliper import Caliper
+
 
 # CaliperCallbackHandler is the only langchain-dependent surface. Import it
 # lazily so the framework-agnostic core (budgets, attribution, baselines, loop

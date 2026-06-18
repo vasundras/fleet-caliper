@@ -19,8 +19,8 @@ all breaches so the caller sees every dimension that fired.
 from __future__ import annotations
 
 import threading
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Mapping
 
 from .budget import Action, Usage
 from .labels import ScopeKey, attribution_keys, canonical, render
@@ -128,7 +128,7 @@ class AttributionBudget:
 
     rules: list[BudgetRule] = field(default_factory=list)
 
-    def add(self, rule: BudgetRule) -> "AttributionBudget":
+    def add(self, rule: BudgetRule) -> AttributionBudget:
         self.rules.append(rule)
         return self
 

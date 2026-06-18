@@ -14,7 +14,8 @@ dimensional attribution and per-agent / per-task baselines.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Mapping
+from collections.abc import Callable, Mapping
+from typing import Any
 from uuid import UUID
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -178,7 +179,8 @@ class CaliperCallbackHandler(BaseCallbackHandler):
                 if self.on_alert is not None:
                     sev = "halt" if b.action is Action.HALT else "warn"
                     self.on_alert(Alert(
-                        AlertKind.EXHAUSTION, b.scope, sev, b.message(), observed_usd=b.observed_usd,
+                        AlertKind.EXHAUSTION, b.scope, sev, b.message(),
+                        observed_usd=b.observed_usd,
                     ))
                 if b.action is Action.HALT:
                     raise BudgetExceeded(

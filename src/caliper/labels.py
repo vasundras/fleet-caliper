@@ -19,9 +19,9 @@ cover per-agent, per-task, and per-(agent,task) budgets and baselines.
 
 from __future__ import annotations
 
-from typing import Mapping, Tuple
+from collections.abc import Mapping
 
-ScopeKey = Tuple[Tuple[str, str], ...]
+ScopeKey = tuple[tuple[str, str], ...]
 
 
 def canonical(labels: Mapping[str, object]) -> ScopeKey:

@@ -3,9 +3,8 @@ and exposes the LangGraph integration points."""
 
 from __future__ import annotations
 
-from typing import Any, Callable, Literal
-
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Literal
 
 from .alerts import Alert
 from .attribution import AttributionBudget, LabeledMeter
@@ -43,7 +42,8 @@ class Caliper:
             callbacks=[caliper.callback_handler()],
             metadata={"agent": "researcher", "task": task_id},
         )
-        graph.add_conditional_edges("agent", caliper.budget_edge, {"continue": "tools", "halt": END})
+        graph.add_conditional_edges(
+            "agent", caliper.budget_edge, {"continue": "tools", "halt": END})
 
         def agent_node(state):
             caliper.record_step(state)   # raises LoopDetected on a pathological loop
@@ -82,7 +82,7 @@ class Caliper:
         self.on_alert = on_alert
 
     # --- metering -----------------------------------------------------------
-    def callback_handler(self) -> "CaliperCallbackHandler":
+    def callback_handler(self) -> CaliperCallbackHandler:
         """A fresh handler bound to this Caliper's meters, budgets, and baselines.
 
         Imported lazily: the callback is the only langchain-dependent surface, so
