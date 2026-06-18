@@ -97,26 +97,58 @@ llm = model.with_config(
 print(caliper.snapshot()["attributed"])   # {'agent=researcher': {...}, 'task=42': {...}, ...}
 ```
 
+## Try it — a working demo on a real LangGraph graph
+
+`examples/demo.py` runs an actual LangGraph agent through Caliper's real callback
+handler and conditional-edge gating. It's deterministic and needs no API key: the
+*model* is scripted (it emits real `AIMessage` objects with token usage and tool
+calls), so every line of Caliper's integration code executes.
+
+```bash
+pip install "langgraph>=0.2" "langchain-core>=0.3"
+python examples/demo.py
+```
+
+Three scenarios, each tripping a different guardrail:
+
+```
+=== healthy   ===  COMPLETED — finishes under budget, Caliper never trips
+=== runaway   ===  HALTED by Caliper: loop detected (repetition) — the loop detector
+=== expensive ===  ALERT spike 3.7σ → 4.0σ, trend 1.98 → 3.10 ...
+                   HALTED by Caliper: task=expensive-1 $0.217 >= $0.12 — the per-task budget
+```
+
+The `expensive` run shows the statistical grounding firing *before* the ceiling:
+spike and trend alerts escalate as cost climbs, then the per-task budget halts it.
+
 ## What's here
 
 ```
 src/caliper/
-  budget.py            # CostMeter, BudgetPolicy, scopes, exceptions
+  budget.py            # CostMeter, BudgetPolicy, scopes
   pricing.py           # PriceBook
+  labels.py            # attribution scope keys
+  attribution.py       # LabeledMeter, BudgetRule, AttributionBudget
+  baselines.py         # BaselineTracker: per-scope spike / trend grounding
+  alerts.py            # Alert / AlertKind (exhaustion / spike / trend)
   loop_detection.py    # LoopDetector: repetition / cycle / oscillation
-  callbacks.py         # CaliperCallbackHandler (LangChain)
+  callbacks.py         # CaliperCallbackHandler (LangChain; optional import)
   caliper.py           # Caliper facade + budget_edge + record_step
+  exceptions.py        # BudgetExceeded / LoopDetected / CaliperTripped
 examples/
-  langgraph_research_agent.py
-tests/
-  test_budget.py
-  test_loop_detection.py
+  demo.py                      # runnable, key-free, real LangGraph
+  langgraph_research_agent.py  # wiring reference for your own model + tools
+benchmarks/
+  simulate.py          # reproducible LLM-free fleet simulation
+tests/                 # 22 tests (budget / attribution / baselines / loops)
 PAPER.md               # arXiv (cs.AI) write-up skeleton
 ```
 
 ## Status
 
-Early. The interfaces are stable enough to build on; the benchmark and empirical study described in `PAPER.md` are in progress.
+Early. The interfaces are stable enough to build on; the benchmark and a working
+LangGraph demo (`examples/demo.py`) run today. The end-to-end empirical study with
+live models described in `PAPER.md` is in progress.
 
 ## License
 
